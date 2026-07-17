@@ -126,7 +126,7 @@ export default function Dashboard({ throws, settings, user }) {
             Welcome back, {user.name} <span style={{ fontSize: '2rem' }}>{user.avatar || '🍯'}</span>
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
-            "Find your center. Challenge your limits. Log your growth."
+            "Find your center. Challenge your limits. Log your growth."{user.studio && ` — ${user.studio}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
