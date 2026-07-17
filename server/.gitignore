@@ -1,0 +1,6 @@
+# Ignore local database file
+data/db.json
+
+# Ignore user uploaded photos
+uploads/*
+!uploads/.gitkeep

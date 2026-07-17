@@ -13,10 +13,15 @@ export default function Auth() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setProfiles(getProfiles());
+    getProfiles()
+      .then(setProfiles)
+      .catch(err => {
+        console.error("Failed to load profiles:", err);
+        setError("Could not connect to the server.");
+      });
   }, []);
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -27,7 +32,7 @@ export default function Auth() {
     }
 
     try {
-      const newProfile = createProfile(trimmedName, studio.trim(), avatar);
+      const newProfile = await createProfile(trimmedName, studio.trim(), avatar);
       // Automatically log in to the newly created profile
       signInProfile(newProfile);
     } catch (err) {
@@ -36,14 +41,20 @@ export default function Auth() {
     }
   };
 
-  const handleDelete = (e, profileId, profileName) => {
+  const handleDelete = async (e, profileId, profileName) => {
     e.stopPropagation(); // prevent signing in when clicking delete
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete the profile "${profileName}"? This will permanently wipe all logs and settings for this profile from this browser.`
+      `Are you sure you want to delete the profile "${profileName}"? This will permanently wipe all logs and settings for this profile from the server.`
     );
     if (confirmDelete) {
-      deleteProfile(profileId);
-      setProfiles(getProfiles());
+      try {
+        await deleteProfile(profileId);
+        const list = await getProfiles();
+        setProfiles(list);
+      } catch (err) {
+        console.error(err);
+        setError('Failed to delete profile.');
+      }
     }
   };
 
