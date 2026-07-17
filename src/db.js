@@ -1,3 +1,74 @@
+// --- Helper to detect if running on GitHub Pages (static demo mode) ---
+const isStaticDemo = () => {
+  return window.location.hostname.endsWith('github.io');
+};
+
+// --- IndexedDB Setup for Local Fallback / Demo Mode ---
+let localDbPromise = null;
+function getLocalDb() {
+  if (localDbPromise) return localDbPromise;
+  
+  localDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open("throwing_log_local_db", 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("throws")) {
+        db.createObjectStore("throws", { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains("settings")) {
+        db.createObjectStore("settings", { keyPath: "userId" });
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+  return localDbPromise;
+}
+
+async function readLocal(storeName, key) {
+  const db = await getLocalDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readonly");
+    const store = transaction.objectStore(storeName);
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function writeLocal(storeName, value) {
+  const db = await getLocalDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
+    const request = store.put(value);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function deleteLocal(storeName, key) {
+  const db = await getLocalDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
+    const request = store.delete(key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function listLocal(storeName) {
+  const db = await getLocalDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readonly");
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 // --- Local Auth Operations (Active Session in Browser) ---
 export function subscribeToAuth(callback) {
   const getActiveUser = () => {
@@ -32,14 +103,29 @@ export function signInProfile(profile) {
   window.dispatchEvent(new CustomEvent("local-auth-changed"));
 }
 
-// --- Potter Profile Operations (Server-Backed) ---
+// --- Potter Profile Operations ---
 export async function getProfiles() {
+  if (isStaticDemo()) {
+    try {
+      return JSON.parse(localStorage.getItem("throwing_log_profiles") || "[]");
+    } catch (e) {
+      return [];
+    }
+  }
   const res = await fetch('/centrd/api/profiles');
   if (!res.ok) throw new Error('Failed to load profiles');
   return res.json();
 }
 
 export async function createProfile(name, studio = "", avatar = "🍯") {
+  if (isStaticDemo()) {
+    const profiles = await getProfiles();
+    const id = "profile_" + Math.random().toString(36).substr(2, 9);
+    const newProfile = { id, name, studio, avatar };
+    profiles.push(newProfile);
+    localStorage.setItem("throwing_log_profiles", JSON.stringify(profiles));
+    return newProfile;
+  }
   const res = await fetch('/centrd/api/profiles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -50,6 +136,34 @@ export async function createProfile(name, studio = "", avatar = "🍯") {
 }
 
 export async function deleteProfile(profileId) {
+  if (isStaticDemo()) {
+    const profiles = await getProfiles();
+    const updated = profiles.filter(p => p.id !== profileId);
+    localStorage.setItem("throwing_log_profiles", JSON.stringify(updated));
+
+    const activeUserJson = localStorage.getItem("throwing_log_mock_user");
+    if (activeUserJson) {
+      const activeUser = JSON.parse(activeUserJson);
+      if (activeUser.id === profileId) {
+        localStorage.removeItem("throwing_log_mock_user");
+        window.dispatchEvent(new CustomEvent("local-auth-changed"));
+      }
+    }
+
+    try {
+      await deleteLocal("settings", profileId);
+      const throwsList = await listLocal("throws");
+      for (const t of throwsList) {
+        if (t.userId === profileId) {
+          await deleteLocal("throws", t.id);
+        }
+      }
+      window.dispatchEvent(new CustomEvent("local-throws-updated"));
+    } catch (e) {
+      console.error("Local clean error:", e);
+    }
+    return { success: true };
+  }
   const res = await fetch(`/centrd/api/profiles/${profileId}`, {
     method: 'DELETE'
   });
@@ -57,14 +171,40 @@ export async function deleteProfile(profileId) {
   return res.json();
 }
 
-// --- Challenge Settings Operations (Server-Backed) ---
+// --- Challenge Settings Operations ---
 export async function loadSettings(userId) {
+  if (isStaticDemo()) {
+    const settings = await readLocal("settings", userId);
+    if (settings) return settings;
+    
+    return {
+      userId,
+      targetCylinders: 200,
+      hasTimeLimit: false,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: "",
+      scheduleType: "none",
+      cadenceFrequency: 3,
+      cadencePeriod: "week",
+      globalUnit: "lb",
+      weightCategories: [
+        { id: "1lb", name: "1 lb Cylinder", weight: 1, unit: "lb", targetCount: 100 },
+        { id: "2lb", name: "2 lb Cylinder", weight: 2, unit: "lb", targetCount: 50 },
+        { id: "3lb", name: "3 lb Cylinder", weight: 3, unit: "lb", targetCount: 30 },
+        { id: "5lb", name: "5 lb Cylinder", weight: 5, unit: "lb", targetCount: 20 }
+      ]
+    };
+  }
   const res = await fetch(`/centrd/api/settings/${userId}`);
   if (!res.ok) throw new Error('Failed to load settings');
   return res.json();
 }
 
 export async function saveSettings(userId, settings) {
+  if (isStaticDemo()) {
+    await writeLocal("settings", { ...settings, userId });
+    return;
+  }
   const res = await fetch('/centrd/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -74,8 +214,21 @@ export async function saveSettings(userId, settings) {
   return res.json();
 }
 
-// --- Cylinder Throw Logs Operations (Server-Backed) ---
+// --- Cylinder Throw Logs Operations ---
 export async function addThrowLog(userId, throwData) {
+  if (isStaticDemo()) {
+    const id = "throw_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
+    const data = {
+      id,
+      userId,
+      createdAt: new Date().toISOString(),
+      photos: [],
+      ...throwData
+    };
+    await writeLocal("throws", data);
+    window.dispatchEvent(new CustomEvent("local-throws-updated"));
+    return id;
+  }
   const res = await fetch('/centrd/api/throws', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -87,6 +240,15 @@ export async function addThrowLog(userId, throwData) {
 }
 
 export async function updateThrowLog(throwId, updates) {
+  if (isStaticDemo()) {
+    const existing = await readLocal("throws", throwId);
+    if (existing) {
+      const updated = { ...existing, ...updates };
+      await writeLocal("throws", updated);
+      window.dispatchEvent(new CustomEvent("local-throws-updated"));
+    }
+    return;
+  }
   const res = await fetch(`/centrd/api/throws/${throwId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -97,6 +259,11 @@ export async function updateThrowLog(throwId, updates) {
 }
 
 export async function deleteThrowLog(throwId) {
+  if (isStaticDemo()) {
+    await deleteLocal("throws", throwId);
+    window.dispatchEvent(new CustomEvent("local-throws-updated"));
+    return;
+  }
   const res = await fetch(`/centrd/api/throws/${throwId}`, {
     method: 'DELETE'
   });
@@ -106,6 +273,28 @@ export async function deleteThrowLog(throwId) {
 
 // Real-Time Event Sync using Server-Sent Events (SSE)
 export function subscribeToThrows(userId, callback, errorCallback) {
+  if (isStaticDemo()) {
+    const fetchAndCallback = async () => {
+      try {
+        const all = await listLocal("throws");
+        const filtered = all
+          .filter(t => t.userId === userId)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        callback(filtered);
+      } catch (err) {
+        console.error("Local load throws failed:", err);
+        if (errorCallback) errorCallback(err);
+      }
+    };
+
+    fetchAndCallback();
+    
+    window.addEventListener("local-throws-updated", fetchAndCallback);
+    return () => {
+      window.removeEventListener("local-throws-updated", fetchAndCallback);
+    };
+  }
+
   // Fetch initial logs list
   fetch(`/centrd/api/throws/${userId}`)
     .then(res => {
@@ -141,6 +330,22 @@ export function subscribeToThrows(userId, callback, errorCallback) {
 
 // --- Local Multipart Image Upload Operation ---
 export async function uploadThrowPhoto(userId, throwId, file, stageLabel = "Thrown") {
+  if (isStaticDemo()) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve({
+          id: "photo_" + Math.random().toString(36).substr(2, 9),
+          url: reader.result,
+          stage: stageLabel,
+          timestamp: new Date().toISOString()
+        });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   const formData = new FormData();
   formData.append('photo', file);
   formData.append('userId', userId);
