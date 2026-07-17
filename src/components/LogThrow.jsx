@@ -248,7 +248,7 @@ export default function LogThrow({ settings, user, onNavigateToHistory }) {
             marginTop: '0.4rem'
           }}>
             {[
-              { id: 'Successful', color: 'var(--success)', desc: 'Kept & shaped' },
+              { id: 'Successful', color: 'var(--success)', desc: 'Successful throw' },
               { id: 'Failed', color: 'var(--collapse)', desc: 'Collapsed / Failed' },
               { id: 'Flawed', color: 'var(--ochre)', desc: 'Slight errors / Uneven' }
             ].map(item => {

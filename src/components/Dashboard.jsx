@@ -422,7 +422,7 @@ export default function Dashboard({ throws, settings, user }) {
               {/* Success Ratio */}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.8rem' }}>
                 <span>Success Ratio:</span>
-                <span>{cat.count > 0 ? Math.round((cat.successCount / cat.count) * 100) : 0}% ({cat.successCount} kept)</span>
+                <span>{cat.count > 0 ? Math.round((cat.successCount / cat.count) * 100) : 0}% ({cat.successCount} success)</span>
               </div>
 
               {/* Slider Progress Bar */}

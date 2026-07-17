@@ -37,7 +37,7 @@ export async function exportChallengeToZip(throws, settings) {
   md += `## Challenge Overview\n`;
   md += `- **Cylinder Target:** ${targetCylinders} cylinders\n`;
   md += `- **Total Logged Throws:** ${totalThrows} (${Math.min(100, Math.round((totalThrows/targetCylinders)*100))}% complete)\n`;
-  md += `- **Successful/Kept:** ${successCount} (${successRate}% success rate)\n`;
+  md += `- **Successful Throws:** ${successCount} (${successRate}% success rate)\n`;
   
   if (settings.hasTimeLimit) {
     md += `- **Timeline:** ${new Date(settings.startDate + 'T00:00:00').toLocaleDateString()} to ${new Date(settings.endDate + 'T00:00:00').toLocaleDateString()}\n`;
