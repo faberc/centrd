@@ -142,11 +142,11 @@ export default function LogThrow({ settings, user, onNavigateToHistory }) {
       };
 
       // Add log
-      const throwId = await addThrowLog(user.uid, throwData);
+      const throwId = await addThrowLog(user.id, throwData);
 
       // If photo was selected, upload it
       if (photo) {
-        const photoObj = await uploadThrowPhoto(user.uid, throwId, photo, "Wet Clay");
+        const photoObj = await uploadThrowPhoto(user.id, throwId, photo, "Wet Clay");
         // Update throw record with the uploaded photo info
         await updateThrowLog(throwId, {
           photos: [photoObj]

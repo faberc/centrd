@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { isFirebaseConfigured, getStoredConfig } from './firebase';
-import { subscribeToAuth, loadSettings, subscribeToThrows, mockSignIn } from './db';
+import { subscribeToAuth, loadSettings, subscribeToThrows } from './db';
 import { exportChallengeToZip } from './utils/exporter';
-
-import Onboarding from './components/Onboarding';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import LogThrow from './components/LogThrow';
@@ -29,7 +26,6 @@ const LOADING_MESSAGES = [
 ];
 
 export default function App() {
-  const [dbConfigured, setDbConfigured] = useState(isFirebaseConfigured());
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   
@@ -67,11 +63,6 @@ export default function App() {
 
   // Auth Subscription
   useEffect(() => {
-    if (!dbConfigured) {
-      setAuthLoading(false);
-      return;
-    }
-
     const unsubscribe = subscribeToAuth(async (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
@@ -82,14 +73,14 @@ export default function App() {
           // Load settings with inline try/catch fallback
           let userSettings = null;
           try {
-            userSettings = await loadSettings(currentUser.uid);
+            userSettings = await loadSettings(currentUser.id);
           } catch (e) {
-            console.error("Failed to load settings from Firestore, using default:", e);
+            console.error("Failed to load settings from storage, using default:", e);
           }
 
           if (!userSettings) {
             userSettings = {
-              userId: currentUser.uid,
+              userId: currentUser.id,
               targetCylinders: 200,
               hasTimeLimit: false,
               startDate: new Date().toISOString().split('T')[0],
@@ -109,7 +100,7 @@ export default function App() {
 
           // Subscribe to throws with error handler
           const unsubscribeThrows = subscribeToThrows(
-            currentUser.uid,
+            currentUser.id,
             (updatedThrows) => {
               setThrows(updatedThrows);
               setLoadingData(false);
@@ -138,7 +129,7 @@ export default function App() {
     return () => {
       if (typeof unsubscribe === 'function') unsubscribe();
     };
-  }, [dbConfigured]);
+  }, []);
 
   const handleExport = async () => {
     if (exporting || throws.length === 0) return;
@@ -152,11 +143,6 @@ export default function App() {
       setExporting(false);
     }
   };
-
-  // If Firebase config is missing, show onboarding configuration screen
-  if (!dbConfigured) {
-    return <Onboarding />;
-  }
 
   // Show loading indicator during Auth validation or initial data fetch
   if (authLoading || (user && (loadingData || !settings))) {
@@ -174,20 +160,6 @@ export default function App() {
   if (!user) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--bg-secondary)' }}>
-        {localStorage.getItem("throwing_log_use_mock_db") === "true" && (
-          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-            <span style={{ background: 'var(--ochre-light)', color: 'var(--ochre)', padding: '0.4rem 1rem', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 600 }}>
-              Running in local sandbox mode
-            </span>
-            <button 
-              onClick={() => mockSignIn()} 
-              className="btn btn-secondary" 
-              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', marginLeft: '0.5rem', borderRadius: '8px' }}
-            >
-              Sign In to Demo Sandbox
-            </button>
-          </div>
-        )}
         <Auth />
       </div>
     );

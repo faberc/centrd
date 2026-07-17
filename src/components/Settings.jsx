@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { saveSettings, signOutUser } from '../db';
-import { clearFirebaseConfig } from '../firebase';
 import { Settings as SettingsIcon, LogOut, Download, Upload, Plus, Trash2 } from 'lucide-react';
 
 export default function Settings({ settings, user, onSettingsUpdate }) {
@@ -69,7 +68,7 @@ export default function Settings({ settings, user, onSettingsUpdate }) {
 
     try {
       const updatedSettings = {
-        userId: user.uid,
+        userId: user.id,
         targetCylinders,
         hasTimeLimit: scheduleType === 'deadline',
         scheduleType,
@@ -85,7 +84,7 @@ export default function Settings({ settings, user, onSettingsUpdate }) {
         globalUnit
       };
 
-      await saveSettings(user.uid, updatedSettings);
+      await saveSettings(user.id, updatedSettings);
       if (onSettingsUpdate) {
         onSettingsUpdate(updatedSettings);
       }
@@ -153,11 +152,10 @@ export default function Settings({ settings, user, onSettingsUpdate }) {
     reader.readAsText(file);
   };
 
-  const handleResetConnection = () => {
-    if (window.confirm("Are you sure you want to disconnect from this database? This will clear the local configuration and reload the app.")) {
-      clearFirebaseConfig();
-      localStorage.removeItem("throwing_log_use_mock_db");
-      localStorage.removeItem("throwing_log_mock_user");
+  const handleResetDatabase = () => {
+    if (window.confirm("Are you sure you want to WIPE all profiles, throwing logs, and settings from this browser? This action is permanent and cannot be undone.")) {
+      indexedDB.deleteDatabase("throwing_log_local_db");
+      localStorage.clear();
       window.location.reload();
     }
   };
@@ -479,19 +477,19 @@ export default function Settings({ settings, user, onSettingsUpdate }) {
           gap: '1rem'
         }}>
           <div>
-            <h4 style={{ fontWeight: 700, color: 'var(--collapse)', fontSize: '0.95rem' }}>Database Management</h4>
+            <h4 style={{ fontWeight: 700, color: 'var(--collapse)', fontSize: '0.95rem' }}>Clear Local Storage</h4>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Disconnect credentials or reset the database connection setup to link a new Firebase project.
+              Wipe all potter profiles, settings, logs, and photos stored on this browser.
             </p>
           </div>
-          <button type="button" onClick={handleResetConnection} className="btn btn-secondary" style={{
+          <button type="button" onClick={handleResetDatabase} className="btn btn-secondary" style={{
             color: 'var(--collapse)',
             borderColor: 'rgba(184, 76, 54, 0.3)',
             background: 'none',
             fontSize: '0.8rem',
             padding: '0.5rem 1rem'
           }}>
-            Disconnect Database
+            Wipe Application Data
           </button>
         </div>
 

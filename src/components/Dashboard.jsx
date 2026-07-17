@@ -122,8 +122,8 @@ export default function Dashboard({ throws, settings, user }) {
           <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--terracotta)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Centrd: A Throwing Diary
           </span>
-          <h1 className="serif-title" style={{ fontSize: '2.4rem', fontWeight: 700, marginTop: '0.2rem' }}>
-            Welcome back, {user.displayName || user.email.split('@')[0]}
+          <h1 className="serif-title" style={{ fontSize: '2.4rem', fontWeight: 700, marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            Welcome back, {user.name} <span style={{ fontSize: '2rem' }}>{user.avatar || '🍯'}</span>
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
             "Find your center. Challenge your limits. Log your growth."

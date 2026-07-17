@@ -95,7 +95,7 @@ export default function History({ throws, settings, user }) {
       
       // Upload
       const finalLabel = stageLabel === 'Other' ? (customLabel.trim() || 'Fired') : stageLabel;
-      const photoObj = await uploadThrowPhoto(user.uid, targetThrowId, compressed, finalLabel);
+      const photoObj = await uploadThrowPhoto(user.id, targetThrowId, compressed, finalLabel);
 
       // Find the existing log
       const targetThrow = throws.find(t => t.id === targetThrowId);
