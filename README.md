@@ -36,9 +36,6 @@ Clone the repository and install the fullstack dependencies:
 git clone https://github.com/faberc/centrd.git
 cd centrd
 
-# Switch to the self-hosted branch
-git checkout self-hosted
-
 # Install packages
 npm install
 ```
