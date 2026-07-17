@@ -44,7 +44,7 @@ npm install
 ```
 
 ### 2. Compile and Start the Server
-Build the optimized client files and boot the database backend:
+From the root of your cloned `centrd` directory, build the optimized client files and boot the database backend:
 
 ```bash
 # 1. Compile the frontend built assets
